@@ -543,20 +543,41 @@ function drawAll(u){ drawDb(u); drawPa(u); var ev=document.getElementById(u+'-ev
 /* ── GOLD ── */
 async function fetchGold(){
   try{
-    var r=await fetch('https://prices.lbma.org.uk/json/gold_pm.json');
+    // Try gold-api.com first — CORS-open, no key, real-time XAU/EUR
+    var r=await fetch('https://gold-api.com/price/EUR');
+    if(!r.ok) throw new Error('gold-api fail');
     var data=await r.json();
-    var latest=null;
-    for(var i=data.length-1;i>=0;i--){if(data[i].v&&data[i].v[2]&&data[i].v[2]>0){latest=data[i];break;}}
-    if(!latest) throw new Error('no data');
-    var oz=latest.v[2], gm=oz/31.1035, na=Math.round(gm*85);
+    // gold-api returns price per troy oz in EUR
+    var oz=parseFloat(data.price);
+    if(!oz||oz<=0) throw new Error('invalid price');
+    var gm=oz/31.1035, na=Math.round(gm*85);
     goldG=gm;
+    var now=new Date().toLocaleDateString('fr-FR');
     document.getElementById('gv').textContent=na.toLocaleString('fr-FR')+' €';
-    document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+latest.d;
+    document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+now;
     USERS.forEach(function(u){ if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;saveU(u);} });
     USERS.forEach(function(u){ drawAll(u); });
   } catch(e){
-    document.getElementById('gv').textContent='—';
-    document.getElementById('gs').textContent='Cours indisponible — mode hors ligne';
+    try{
+      // Fallback: open.er-api.com for USD/EUR rate + gold-api USD price
+      var r2=await fetch('https://gold-api.com/price/USD');
+      var d2=await r2.json();
+      var ozUSD=parseFloat(d2.price);
+      var fx=await fetch('https://open.er-api.com/v6/latest/USD');
+      var fxd=await fx.json();
+      var eurRate=fxd.rates&&fxd.rates.EUR?fxd.rates.EUR:0.92;
+      var oz=ozUSD*eurRate;
+      var gm=oz/31.1035, na=Math.round(gm*85);
+      goldG=gm;
+      var now=new Date().toLocaleDateString('fr-FR');
+      document.getElementById('gv').textContent=na.toLocaleString('fr-FR')+' €';
+      document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+now;
+      USERS.forEach(function(u){ if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;saveU(u);} });
+      USERS.forEach(function(u){ drawAll(u); });
+    } catch(e2){
+      document.getElementById('gv').textContent='—';
+      document.getElementById('gs').textContent='Cours indisponible — vérifiez votre connexion';
+    }
   }
 }
 
