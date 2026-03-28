@@ -542,42 +542,45 @@ function drawAll(u){ drawDb(u); drawPa(u); var ev=document.getElementById(u+'-ev
 
 /* ── GOLD ── */
 async function fetchGold(){
-  try{
-    // Try gold-api.com first — CORS-open, no key, real-time XAU/EUR
-    var r=await fetch('https://gold-api.com/price/EUR');
-    if(!r.ok) throw new Error('gold-api fail');
-    var data=await r.json();
-    // gold-api returns price per troy oz in EUR
-    var oz=parseFloat(data.price);
-    if(!oz||oz<=0) throw new Error('invalid price');
-    var gm=oz/31.1035, na=Math.round(gm*85);
-    goldG=gm;
-    var now=new Date().toLocaleDateString('fr-FR');
-    document.getElementById('gv').textContent=na.toLocaleString('fr-FR')+' €';
-    document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+now;
-    USERS.forEach(function(u){ if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;saveU(u);} });
-    USERS.forEach(function(u){ drawAll(u); });
-  } catch(e){
+  var endpoints=[
+    'https://api.gold-api.com/price/XAU/EUR',
+    'https://gold-api.com/price/EUR'
+  ];
+  for(var ei=0;ei<endpoints.length;ei++){
     try{
-      // Fallback: open.er-api.com for USD/EUR rate + gold-api USD price
-      var r2=await fetch('https://gold-api.com/price/USD');
-      var d2=await r2.json();
-      var ozUSD=parseFloat(d2.price);
-      var fx=await fetch('https://open.er-api.com/v6/latest/USD');
-      var fxd=await fx.json();
-      var eurRate=fxd.rates&&fxd.rates.EUR?fxd.rates.EUR:0.92;
-      var oz=ozUSD*eurRate;
+      var r=await fetch(endpoints[ei],{mode:'cors'});
+      if(!r.ok) continue;
+      var data=await r.json();
+      var oz=parseFloat(data.price||data.rate||0);
+      if(!oz||oz<=0) continue;
       var gm=oz/31.1035, na=Math.round(gm*85);
       goldG=gm;
       var now=new Date().toLocaleDateString('fr-FR');
       document.getElementById('gv').textContent=na.toLocaleString('fr-FR')+' €';
       document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+now;
-      USERS.forEach(function(u){ if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;saveU(u);} });
-      USERS.forEach(function(u){ drawAll(u); });
-    } catch(e2){
-      document.getElementById('gv').textContent='—';
-      document.getElementById('gs').textContent='Cours indisponible — vérifiez votre connexion';
-    }
+      USERS.forEach(function(u){if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;_origSave(u);}});
+      USERS.forEach(function(u){drawAll(u);});
+      return;
+    }catch(e){}
+  }
+  // Fallback: use allorigins proxy with LBMA
+  try{
+    var proxy='https://api.allorigins.win/get?url='+encodeURIComponent('https://prices.lbma.org.uk/json/gold_pm.json');
+    var r=await fetch(proxy);
+    var d=await r.json();
+    var arr=JSON.parse(d.contents);
+    var latest=null;
+    for(var i=arr.length-1;i>=0;i--){if(arr[i].v&&arr[i].v[2]&&arr[i].v[2]>0){latest=arr[i];break;}}
+    if(!latest) throw new Error('no data');
+    var oz=latest.v[2], gm=oz/31.1035, na=Math.round(gm*85);
+    goldG=gm;
+    document.getElementById('gv').textContent=na.toLocaleString('fr-FR')+' €';
+    document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+(latest.d||'');
+    USERS.forEach(function(u){if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;_origSave(u);}});
+    USERS.forEach(function(u){drawAll(u);});
+  }catch(e){
+    document.getElementById('gv').textContent='—';
+    document.getElementById('gs').textContent='Cours indisponible — vérifiez votre connexion';
   }
 }
 
@@ -596,8 +599,12 @@ function gdDisconnect(){if(GD.token)try{google.accounts.oauth2.revoke(GD.token);
 async function gdFind(){var r=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27'+GD_FILE+'%27&fields=files(id,modifiedTime)',{headers:{Authorization:'Bearer '+GD.token}});var d=await r.json();if(d.files&&d.files.length){GD.fileId=d.files[0].id;return d.files[0];}return null;}
 async function gdLoad(){if(!GD.token||GD.busy)return;GD.busy=true;try{var f=await gdFind();if(!f){gdSt('Connecte - premiere utilisation','','✅');GD.busy=false;gdSave();return;}var r=await fetch('https://www.googleapis.com/drive/v3/files/'+GD.fileId+'?alt=media',{headers:{Authorization:'Bearer '+GD.token}});var data=await r.json();if(data&&data.state){USERS.forEach(function(u){if(data.state[u]){ST[u].cfg=Object.assign({},DEFC,data.state[u].cfg||{});ST[u].ent=data.state[u].ent||[];}});USERS.forEach(function(u){_origSave(u);});USERS.forEach(function(u){drawAll(u);});}gdSt('Synchronise avec Google Drive','Derniere sauvegarde : '+new Date(f.modifiedTime).toLocaleString('fr-FR'),'✅');}catch(e){gdSt('Erreur de chargement',e.message||'','⚠️');}GD.busy=false;}
 async function gdSave(){if(!GD.token||GD.busy)return;GD.busy=true;try{var payload=JSON.stringify({state:{s:{cfg:ST.s.cfg,ent:ST.s.ent},a:{cfg:ST.a.cfg,ent:ST.a.ent}},savedAt:new Date().toISOString()});var f=await gdFind();if(!f){var meta=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},body:JSON.stringify({name:GD_FILE,parents:['appDataFolder']})});var md=await meta.json();GD.fileId=md.id;}await fetch('https://www.googleapis.com/upload/drive/v3/files/'+GD.fileId+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},body:payload});gdSt('Synchronise avec Google Drive','Sauvegarde : '+new Date().toLocaleTimeString('fr-FR'),'✅');}catch(e){gdSt('Erreur de sauvegarde',e.message||'','⚠️');}GD.busy=false;}
+var _gdSaving=false;
 var _origSave=saveU;
-function saveU(u){_origSave(u);if(GD.token)setTimeout(gdSave,600);}
+function saveU(u){
+  _origSave(u);
+  if(GD.token&&!_gdSaving){_gdSaving=true;setTimeout(function(){gdSave();_gdSaving=false;},600);}
+}
 /* ── INIT ── */
 USERS.forEach(function(u){ST[u]=loadU(u);});
 USERS.forEach(function(u){drawAll(u);});
