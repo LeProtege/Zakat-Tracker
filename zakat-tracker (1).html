@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zakat Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --gold:#C9A84C;--gl:#E8C97A;--gd:#8C7035;
+  --bg:#0E0E0E;--bg2:#161616;--bg3:#1E1E1E;
+  --b:rgba(201,168,76,.18);--bs:rgba(255,255,255,.07);
+  --t:#F0EAD6;--td:#8A8070;--tm:#554E44;
+  --gr:#4CAF7A;--grb:rgba(76,175,122,.1);
+  --re:#CF6679;--reb:rgba(207,102,121,.1);
+  --am:#E8A84C;--amb:rgba(232,168,76,.1);
+  --bl:#6A9FD8;--blb:rgba(106,159,216,.1);
+  --r:4px;--rl:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--t);font-family:'DM Mono',monospace}
+body{max-width:1040px;margin:0 auto;padding:0 1.5rem 4rem}
+/* Header */
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:2rem 0 1.5rem;border-bottom:1px solid var(--b)}
+.hdr h1{font-family:'Crimson Pro',serif;font-size:2rem;font-weight:300;color:var(--gold);letter-spacing:.04em}
+.hdr p{font-size:10px;color:var(--tm);margin-top:3px;letter-spacing:.1em;text-transform:uppercase}
+.gb{text-align:right}
+.gl{font-size:10px;color:var(--tm);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.gv{font-family:'Crimson Pro',serif;font-size:1.5rem;color:var(--gl)}
+.gs{font-size:10px;color:var(--tm);margin-top:2px}
+/* User tabs */
+.usw{display:flex;border-bottom:1px solid var(--bs)}
+.utb{flex:1;background:none;border:none;padding:14px 0;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;color:var(--tm);border-bottom:3px solid transparent;margin-bottom:-1px;transition:all .2s;letter-spacing:.04em}
+.utb.s.on{color:var(--gold);border-bottom-color:var(--gold)}
+.utb.a.on{color:#A87CA0;border-bottom-color:#A87CA0}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.ds{background:var(--gold)}.da{background:#A87CA0}
+.usp{display:none}.usp.on{display:block}
+/* Inner tabs */
+.itbs{display:flex;margin:1.5rem 0;border-bottom:1px solid var(--bs)}
+.itb{background:none;border:none;color:var(--tm);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s}
+.itb:hover{color:var(--td)}
+.itb.on{color:var(--t);border-bottom-color:var(--t)}
+.sec{display:none}.sec.on{display:block}
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--bs);border-radius:var(--rl);padding:1.4rem;margin-bottom:1rem}
+.ct{font-size:10px;color:var(--gd);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.1rem;padding-bottom:.8rem;border-bottom:1px solid var(--bs)}
+/* Metrics */
+.mrow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--rl);overflow:hidden;margin-bottom:1.5rem}
+.mc{background:var(--bg2);padding:1.1rem 1.3rem}
+.ml{font-size:10px;color:var(--tm);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.mv{font-family:'Crimson Pro',serif;font-size:1.8rem;font-weight:300;line-height:1}
+.cg{color:var(--gl)}.ca{color:var(--am)}.cvg{color:var(--gr)}
+.ms{font-size:10px;color:var(--tm);margin-top:3px}
+/* Nisab bar */
+.bt{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:6px}
+.bf{height:100%;border-radius:2px;transition:width .6s}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:2px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.pr{background:var(--grb);color:var(--gr)}.pn{background:var(--amb);color:var(--am)}
+/* Alerts */
+.al{padding:11px 13px;border-radius:var(--r);font-size:12px;margin-bottom:1rem}
+.alw{background:var(--amb);color:var(--am);border:1px solid rgba(232,168,76,.2)}
+.ali{background:var(--blb);color:var(--bl);border:1px solid rgba(106,159,216,.2)}
+/* Forms */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10px;color:var(--tm);letter-spacing:.08em;text-transform:uppercase}
+.fg input,.fg select{background:var(--bg3);border:1px solid var(--bs);border-radius:var(--r);color:var(--t);font-family:'DM Mono',monospace;font-size:13px;padding:7px 9px;outline:none;transition:border-color .2s;width:100%}
+.fg input:focus,.fg select:focus{border-color:var(--gd)}
+.fg select option{background:var(--bg3)}
+.fgr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+/* Buttons */
+.btn{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.07em;text-transform:uppercase;padding:7px 16px;border-radius:var(--r);cursor:pointer;transition:all .15s;border:1px solid}
+.bp{background:var(--gold);color:var(--bg);border-color:var(--gold)}.bp:hover{background:var(--gl)}
+.bg2{background:none;color:var(--td);border-color:var(--bs)}.bg2:hover{border-color:var(--td);color:var(--t)}
+.bd{background:none;color:var(--re);border-color:rgba(207,102,121,.3);font-size:10px;padding:4px 9px}.bd:hover{background:var(--reb)}
+/* Table */
+.dt{width:100%;border-collapse:collapse;font-size:12px}
+.dt th{text-align:left;font-size:10px;color:var(--tm);letter-spacing:.08em;text-transform:uppercase;padding:7px 9px;border-bottom:1px solid var(--bs);font-weight:400}
+.dt td{padding:10px 9px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--td);vertical-align:middle}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:rgba(255,255,255,.015)}
+.thi{color:var(--t)!important;font-size:13px}
+.tam{color:var(--gl)!important;font-family:'Crimson Pro',serif;font-size:15px}
+/* Chart */
+.cw{position:relative;height:220px}
+.cl{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;font-size:11px;color:var(--td)}
+.cl span{display:flex;align-items:center;gap:5px}
+.cl i{width:10px;height:3px;border-radius:2px;display:inline-block}
+/* Misc */
+.empty{text-align:center;padding:2rem;color:var(--tm);font-size:12px;font-style:italic}
+.rbig{font-family:'Crimson Pro',serif;font-size:2.8rem;font-weight:300;color:var(--re);line-height:1;margin-bottom:6px}
+.sok{font-size:11px;color:var(--gr);margin-left:10px;opacity:0;transition:opacity .3s}.sok.on{opacity:1}
+@media(max-width:640px){.mrow{grid-template-columns:1fr}.fgr{grid-template-columns:1fr}.hdr{flex-direction:column;gap:1rem}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <h1>Zakat Tracker</h1>
+    <p>Suivi personnel — Foyer</p>
+  </div>
+  <div class="gb">
+    <div class="gl">Nisab (85g or)</div>
+    <div class="gv" id="gv">Chargement...</div>
+    <div class="gs" id="gs"></div>
+  </div>
+</div>
+
+<div id="gd-bar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--bg2);border:1px solid var(--bs);border-radius:var(--r);margin:12px 0;font-size:11px;"><div style="display:flex;align-items:center;gap:10px"><span id="gd-ic">☁️</span><div><div id="gd-st" style="color:var(--td)">Non connecté — données locales uniquement</div><div id="gd-inf" style="color:var(--tm);font-size:10px;margin-top:1px"></div></div></div><div style="display:flex;gap:8px"><button class="btn bg2" id="gd-sync" style="display:none;font-size:10px;padding:4px 10px">↑↓ Sync</button><button class="btn bp" id="gd-conn" style="font-size:10px;padding:4px 12px">Connecter Drive</button><button class="btn bg2" id="gd-disc" style="display:none;font-size:10px;padding:4px 10px">Déconnecter</button></div></div>
+<div class="usw">
+  <button class="utb s on" id="utb-s"><span class="dot ds"></span>Sofiane</button>
+  <button class="utb a" id="utb-a"><span class="dot da"></span>Amani</button>
+</div>
+
+<div id="sp-s" class="usp on">
+  <div class="itbs">
+    <button class="itb on" data-u="s" data-p="db">Tableau de bord</button>
+    <button class="itb" data-u="s" data-p="ev">Évolution</button>
+    <button class="itb" data-u="s" data-p="pa">Paramètres</button>
+  </div>
+  <div id="s-db" class="sec on"></div>
+  <div id="s-ev" class="sec"></div>
+  <div id="s-pa" class="sec"></div>
+</div>
+
+<div id="sp-a" class="usp">
+  <div class="itbs">
+    <button class="itb on" data-u="a" data-p="db">Tableau de bord</button>
+    <button class="itb" data-u="a" data-p="ev">Évolution</button>
+    <button class="itb" data-u="a" data-p="pa">Paramètres</button>
+  </div>
+  <div id="a-db" class="sec on"></div>
+  <div id="a-ev" class="sec"></div>
+  <div id="a-pa" class="sec"></div>
+</div>
+
+<script>
+var USERS = ['s','a'];
+var NAMES = {s:'Sofiane', a:'Amani'};
+var DEFC  = {nisab:5000, taux:2.5, annee:'1447', devise:'EUR', auto:true, paiements:{}};
+var SYM   = {EUR:'€', MAD:'MAD', USD:'$'};
+var MNTHS = ['Jan','Fév','Mar','Avr','Mai','Jui','Jul','Aoû','Sep','Oct','Nov','Déc'];
+var POSTES = [
+  {id:'cash',    lb:'Liquidités / Compte courant', ic:'💶'},
+  {id:'epargne', lb:'Épargne (livret, PEL...)',    ic:'🏦'},
+  {id:'or',      lb:'Or & Argent',                 ic:'✨'},
+  {id:'actions', lb:'Actions & Placements',        ic:'📈'},
+  {id:'creances',lb:'Créances recouvrables',       ic:'🤝'},
+  {id:'autres',  lb:'Autres actifs zakatables',    ic:'📦'}
+];
+var R24 = [
+  {h:'1446',d:'2025-03-24'},{h:'1447',d:'2026-03-13'},
+  {h:'1448',d:'2027-03-03'},{h:'1449',d:'2028-02-21'},{h:'1450',d:'2029-02-10'}
+];
+
+var goldG = 0;
+var charts = {};
+var ST = {};
+
+function lk(u,t){ return 'zt4-'+u+'-'+t; }
+function loadU(u){
+  var cfg={}, ent=[];
+  try{ var d=localStorage.getItem(lk(u,'cfg')); if(d) cfg=JSON.parse(d); }catch(e){}
+  try{ var d=localStorage.getItem(lk(u,'ent')); if(d) ent=JSON.parse(d); }catch(e){}
+  return {cfg:Object.assign({},DEFC,cfg), ent:ent};
+}
+function saveU(u){
+  try{ localStorage.setItem(lk(u,'cfg'),JSON.stringify(ST[u].cfg)); }catch(e){}
+  try{ localStorage.setItem(lk(u,'ent'),JSON.stringify(ST[u].ent)); }catch(e){}
+}
+
+function sy(u){ return SYM[ST[u].cfg.devise]||'€'; }
+function fm(n,u){ return isNaN(+n)?'—':Math.round(+n).toLocaleString('fr-FR')+' '+sy(u); }
+function td(){ return new Date().toISOString().slice(0,10); }
+function cm(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function ml(mk){ var p=mk.split('-'); return MNTHS[parseInt(p[1])-1]+' '+p[0]; }
+function tot(e){ if(!e||!e.p) return 0; return Object.values(e.p).reduce(function(s,v){return s+(+v||0);},0); }
+function rate(){ if(goldG>0) return goldG; try{ var s=document.getElementById('gs'); if(s){ var m=s.textContent.match(/([\d\s]+)\s*€\/g/); if(m) return parseFloat(m[1].replace(/\s/g,'')); } }catch(e){} return 0; }
+
+/* ── NAV ── */
+['s','a'].forEach(function(u){
+  document.getElementById('utb-'+u).addEventListener('click',function(){
+    ['s','a'].forEach(function(x){
+      document.getElementById('utb-'+x).classList.toggle('on',x===u);
+      document.getElementById('sp-'+x).classList.toggle('on',x===u);
+    });
+  });
+});
+document.querySelectorAll('.itb').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var u=btn.dataset.u, p=btn.dataset.p;
+    document.querySelectorAll('#sp-'+u+' .itb').forEach(function(b){ b.classList.toggle('on',b.dataset.p===p); });
+    document.querySelectorAll('#sp-'+u+' .sec').forEach(function(s){ s.classList.toggle('on',s.id===u+'-'+p); });
+    if(p==='ev') drawEv(u);
+  });
+});
+
+/* ── RAMADAN ── */
+function rnBanner(){
+  var now=new Date(); now.setHours(0,0,0,0);
+  var nx=null;
+  for(var i=0;i<R24.length;i++){ var dd=new Date(R24[i].d); if(dd>=now){nx=R24[i];break;} }
+  if(!nx) return '';
+  var tg=new Date(nx.d);
+  var diff=Math.round((tg-now)/86400000);
+  var ds=tg.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  var col=diff<=30?'rgba(201,168,76,.12)':'rgba(255,255,255,.03)';
+  var tc=diff<=30?'var(--gl)':'var(--td)';
+  var lc=diff<=30?'var(--gd)':'var(--tm)';
+  if(diff===0) return '<div style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.5);border-radius:var(--rl);padding:14px 18px;margin-bottom:1.2rem;display:flex;gap:14px;align-items:center"><div style="font-size:1.8rem">☀️</div><div><div style="font-size:10px;color:var(--gd);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Aujourd\'hui — 24 Ramadan '+nx.h+'H</div><div style="font-family:Crimson Pro,serif;font-size:1.1rem;color:var(--gl)">Vérifiez votre nisab avant de payer votre zakat.</div></div></div>';
+  return '<div style="background:'+col+';border:1px solid var(--bs);border-radius:var(--rl);padding:12px 16px;margin-bottom:1.2rem;display:flex;gap:14px;align-items:center"><div style="text-align:center;min-width:48px"><div style="font-family:Crimson Pro,serif;font-size:2rem;color:'+tc+';line-height:1">'+diff+'</div><div style="font-size:9px;color:'+lc+';text-transform:uppercase;letter-spacing:.08em">jours</div></div><div style="width:1px;height:32px;background:var(--bs)"></div><div><div style="font-size:10px;color:'+lc+';text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">24 Ramadan '+nx.h+'H — '+ds+'</div><div style="font-size:12px;color:var(--tm)">Date de vérification du nisab pour la zakat.</div></div></div>';
+}
+
+/* ── DASHBOARD ── */
+function drawDb(u){
+  var el=document.getElementById(u+'-db');
+  // Latest snapshot for nisab bar
+  var le=ST[u].ent.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);})[0]||null;
+  var total=tot(le), nisab=ST[u].cfg.nisab, taux=ST[u].cfg.taux;
+  var pct=nisab>0?Math.min(100,(total/nisab)*100):0;
+  var ok=total>=nisab;
+  // Annual zakat: based on 24 Ramadan snapshot (entry of that month) or latest
+  var annee=ST[u].cfg.annee;
+  var zakatEntry=le; // always use latest entry
+  var zakatBase=zakatEntry?tot(zakatEntry):0;
+  var due=zakatBase>=nisab?Math.round(zakatBase*taux/100):0;
+  // Paid status
+  var paiements=ST[u].cfg.paiements||{};
+  var paid=paiements[annee]||0;
+  var restant=Math.max(0,due-paid);
+  var h=rnBanner();
+  h+='<div class="mrow">';
+  h+='<div class="mc"><div class="ml">Patrimoine (dernier snapshot)</div><div class="mv cg">'+fm(total,u)+'</div><div class="ms">'+(le?le.date+' '+le.time:'aucune saisie')+'</div></div>';
+  h+='<div class="mc"><div class="ml">Zakat due '+annee+'H</div><div class="mv ca">'+fm(due,u)+'</div><div class="ms">base: dernier snapshot</div></div>';
+  h+='<div class="mc"><div class="ml">Restant à verser</div><div class="mv '+(restant===0&&due>0?'cvg':'ca')+'">'+fm(restant,u)+'</div><div class="ms">'+(due>0&&restant===0?'✓ Zakat versée':'sur '+fm(due,u))+'</div></div>';
+  h+='</div>';
+  // Nisab bar
+  h+='<div class="card"><div class="ct">Seuil du nisab</div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  h+='<div class="pill '+(ok?'pr':'pn')+'">'+(ok?'Nisab atteint':'Nisab non atteint')+'</div>';
+  h+='<span style="font-size:11px;color:var(--td)">'+pct.toFixed(0)+'% — '+fm(total,u)+' / '+fm(nisab,u)+'</span>';
+  h+='</div><div class="bt"><div class="bf" style="width:'+pct+'%;background:'+(ok?'var(--gr)':'var(--am)')+'"></div></div></div>';
+  // Annual zakat card
+  h+='<div class="card"><div class="ct">Zakat annuelle — '+annee+'H (24 Ramadan)</div>';
+  if(due===0){
+    h+='<div class="al alw">Nisab non atteint — aucune zakat obligatoire pour '+annee+'H.</div>';
+  } else if(restant===0){
+    h+='<div class="al" style="background:var(--grb);color:var(--gr);border:1px solid rgba(76,175,122,.2)">✓ Zakat entièrement versée pour '+annee+'H — '+fm(paid,u)+' versés.</div>';
+  } else {
+    h+='<div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:12px">';
+    h+='<div><div class="ml" style="margin-bottom:4px">À verser le 24 Ramadan</div><div class="rbig">'+fm(restant,u)+'</div><div style="font-size:12px;color:var(--tm);margin-top:4px">'+taux+'% de '+fm(zakatBase,u)+(paid>0?' — déjà versé : '+fm(paid,u):'')+'</div></div>';
+    h+='</div>';
+    // Progress bar if partial payment
+    if(paid>0){
+      var ppct=Math.min(100,Math.round(paid/due*100));
+      h+='<div class="bt"><div class="bf" style="width:'+ppct+'%;background:var(--gr)"></div></div>';
+      h+='<div style="font-size:10px;color:var(--tm);margin-bottom:12px">'+ppct+'% versé</div>';
+    }
+  }
+  // Payment form
+  if(due>0){
+    h+='<div style="border-top:1px solid var(--bs);padding-top:12px;margin-top:4px">';
+    h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">';
+    h+='<div class="fg" style="flex:1;min-width:140px"><label>Montant versé ('+sy(u)+')</label>';
+    h+='<input id="db-pay-'+u+'" type="number" min="0" step="1" placeholder="'+restant+'" style="background:var(--bg3);border:1px solid var(--bs);border-radius:var(--r);color:var(--t);font-family:DM Mono,monospace;font-size:13px;padding:7px 9px;outline:none;width:100%"></div>';
+    h+='<button class="btn bp" id="db-pay-btn-'+u+'">Enregistrer versement</button>';
+    if(paid>0) h+='<button class="btn bd" id="db-pay-reset-'+u+'">Réinitialiser</button>';
+    h+='</div></div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  // Listeners
+  var pb=document.getElementById('db-pay-btn-'+u);
+  if(pb) pb.addEventListener('click',function(){
+    var v=parseFloat(document.getElementById('db-pay-'+u).value)||0;
+    if(v<=0) return;
+    if(!ST[u].cfg.paiements) ST[u].cfg.paiements={};
+    ST[u].cfg.paiements[annee]=(ST[u].cfg.paiements[annee]||0)+v;
+    saveU(u); drawDb(u);
+  });
+  var pr=document.getElementById('db-pay-reset-'+u);
+  if(pr) pr.addEventListener('click',function(){
+    if(!confirm('Réinitialiser les versements pour '+annee+'H ?')) return;
+    if(ST[u].cfg.paiements) ST[u].cfg.paiements[annee]=0;
+    saveU(u); drawDb(u);
+  });
+}
+
+/* ── EVOLUTION ── */
+function drawEv(u){
+  var el=document.getElementById(u+'-ev');
+  if(!el) return;
+  var ents=ST[u].ent;
+  var ac=u==='s'?'#C9A84C':'#A87CA0';
+  var r=rate();
+  var now=new Date();
+  var dateLabel=now.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+
+  var h='<div class="card"><div class="ct">Nouvelle saisie — '+dateLabel+'</div>';
+
+  for(var pi=0;pi<POSTES.length;pi++){
+    var p=POSTES[pi];
+    if(p.id==='or'){
+      var gr='';
+      var ev=0;
+      var rl=r>0?Math.round(r).toLocaleString('fr-FR')+' €/g · LBMA':'cours indisponible';
+      h+='<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)">';
+      h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+      h+='<span style="font-size:14px;width:22px;text-align:center">'+p.ic+'</span>';
+      h+='<span style="flex:1;font-size:12px;color:var(--td)">'+p.lb+'</span></div>';
+      h+='<div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.18);border-radius:4px;padding:10px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+      h+='<div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px">';
+      h+='<label style="font-size:10px;color:var(--gd);letter-spacing:.07em;text-transform:uppercase">Poids (grammes)</label>';
+      h+='<input id="inp-'+u+'-og" type="number" value="'+(gr||'')+'" min="0" step="0.1" placeholder="Ex: 42.5" style="background:var(--bg3);border:1px solid var(--bs);border-radius:4px;color:var(--t);font-family:DM Mono,monospace;font-size:13px;padding:6px 9px;outline:none;width:100%">';
+      h+='<span style="font-size:10px;color:var(--tm)">'+rl+'</span></div>';
+      h+='<div style="display:flex;flex-direction:column;gap:4px;text-align:right">';
+      h+='<span style="font-size:10px;color:var(--gd);letter-spacing:.07em;text-transform:uppercase">Valeur en €</span>';
+      h+='<span id="inp-'+u+'-oe" style="font-family:Crimson Pro,serif;font-size:1.4rem;color:var(--gl)">'+(ev>0?ev.toLocaleString('fr-FR')+' €':'—')+'</span>';
+      h+='</div></div></div>';
+    } else {
+      var vv='';
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)">';
+      h+='<span style="font-size:14px;width:22px;text-align:center">'+p.ic+'</span>';
+      h+='<span style="flex:1;font-size:12px;color:var(--td)">'+p.lb+'</span>';
+      h+='<input id="inp-'+u+'-'+p.id+'" type="number" value="'+(vv||'')+'" min="0" step="1" placeholder="0" style="width:130px;background:var(--bg3);border:1px solid var(--bs);border-radius:var(--r);color:var(--t);font-family:DM Mono,monospace;font-size:13px;padding:6px 9px;outline:none;text-align:right">';
+      h+='</div>';
+    }
+  }
+
+  var curT=0;
+  var curZ=0;
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--bs);margin-top:4px">';
+  h+='<div><div class="ml" style="margin-bottom:4px">Total zakatable</div><div id="ev-tot-'+u+'" style="font-family:Crimson Pro,serif;font-size:1.8rem;color:var(--gl)">'+fm(curT,u)+'</div></div>';
+  h+='<div style="text-align:right"><div class="ml" style="margin-bottom:4px">Zakat due</div><div id="ev-zak-'+u+'" style="font-family:Crimson Pro,serif;font-size:1.8rem;color:var(--am)">'+(curZ>0?fm(curZ,u):'—')+'</div></div>';
+  h+='</div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn bp" id="ev-save-'+u+'">Enregistrer</button></div>';
+  h+='</div>';
+
+  // Chart card
+  var sorted=ents.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+  h+='<div class="card"><div class="ct">Évolution patrimoine vs nisab</div>';
+  if(sorted.length<1){
+    h+='<div class="empty" style="height:200px;display:flex;align-items:center;justify-content:center">Aucune saisie enregistrée.</div>';
+  } else {
+    h+='<div class="cl"><span><i style="background:'+ac+'"></i>Patrimoine</span><span><i style="background:#CF6679;opacity:.8"></i>Nisab</span></div>';
+    h+='<div class="cw"><canvas id="ch-'+u+'"></canvas></div>';
+  }
+  h+='</div>';
+
+  // History
+  var desc=ents.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  h+='<div class="card"><div class="ct">Historique mensuel</div>';
+  if(!desc.length){
+    h+='<div class="empty">Aucune saisie enregistrée.</div>';
+  } else {
+    h+='<div style="overflow-x:auto"><table class="dt"><thead><tr><th>Date</th><th>Heure</th><th>Cash</th><th>Épargne</th><th>Or</th><th>Actions</th><th>Total</th><th>Zakat due</th><th></th></tr></thead><tbody>';
+    for(var ei=0;ei<desc.length;ei++){
+      var e=desc[ei], et=tot(e), ez=et>=e.nisab?Math.round(et*ST[u].cfg.taux/100):0;
+      var aut=(e.p.creances||0)+(e.p.autres||0);
+      h+='<tr><td class="thi">'+e.date+'</td>';
+      h+='<td style="color:var(--td)">'+(e.time||'—')+'</td>';
+      h+='<td>'+(e.p.cash?fm(e.p.cash,u):'—')+'</td>';
+      h+='<td>'+(e.p.epargne?fm(e.p.epargne,u):'—')+'</td>';
+      h+='<td>'+(e.p.or?fm(e.p.or,u)+(e.og?'<div style="font-size:10px;color:var(--gd)">'+e.og+'g</div>':''):'—')+'</td>';
+      h+='<td>'+(e.p.actions?fm(e.p.actions,u):'—')+'</td>';
+      h+='<td class="tam">'+fm(et,u)+'</td>';
+      h+='<td style="color:var(--am)">'+(ez>0?fm(ez,u):'—')+'</td>';
+      h+='<td><button class="btn bd" data-u="'+u+'" data-id="'+e.id+'">Suppr.</button></td>';
+      h+='</tr>';
+    }
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+
+  el.innerHTML=h;
+
+  /* attach listeners — NO inline handlers */
+  var ogInp=document.getElementById('inp-'+u+'-og');
+  if(ogInp){
+    ogInp.addEventListener('input',function(){
+      var g=parseFloat(this.value)||0, r2=rate();
+      var v=r2>0?Math.round(g*r2):0;
+      var dsp=document.getElementById('inp-'+u+'-oe');
+      if(dsp) dsp.textContent=v>0?v.toLocaleString('fr-FR')+' €':(g>0&&r2===0?'Cours indisponible':'—');
+      calcTot(u);
+    });
+  }
+
+  for(var qi=0;qi<POSTES.length;qi++){
+    if(POSTES[qi].id==='or') continue;
+    (function(pid){
+      var inp=document.getElementById('inp-'+u+'-'+pid);
+      if(inp) inp.addEventListener('input',function(){calcTot(u);});
+    })(POSTES[qi].id);
+  }
+
+  var sv=document.getElementById('ev-save-'+u);
+  if(sv) sv.addEventListener('click',function(){saveEnt(u);});
+
+  el.querySelectorAll('button.bd').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var bu=btn.dataset.u, bid=parseInt(btn.dataset.id);
+      if(!confirm('Supprimer cette saisie ?')) return;
+      ST[bu].ent=ST[bu].ent.filter(function(e){return e.id!==bid;});
+      saveU(bu); drawEv(bu); drawDb(bu);
+    });
+  });
+
+  if(sorted.length>=1) setTimeout(function(){buildCh(u,sorted);},80);
+}
+
+function calcTot(u){
+  var t=0, r2=rate();
+  for(var i=0;i<POSTES.length;i++){
+    var p=POSTES[i];
+    if(p.id==='or'){
+      var g=parseFloat((document.getElementById('inp-'+u+'-og')||{}).value)||0;
+      t+=r2>0?Math.round(g*r2):0;
+    } else {
+      t+=parseFloat((document.getElementById('inp-'+u+'-'+p.id)||{}).value)||0;
+    }
+  }
+  var n=ST[u].cfg.nisab, tx=ST[u].cfg.taux;
+  var z=t>=n?Math.round(t*tx/100):0;
+  var te=document.getElementById('ev-tot-'+u);
+  var ze=document.getElementById('ev-zak-'+u);
+  if(te) te.textContent=Math.round(t).toLocaleString('fr-FR')+' '+sy(u);
+  if(ze) ze.textContent=z>0?Math.round(z).toLocaleString('fr-FR')+' '+sy(u):'—';
+}
+
+function saveEnt(u){
+  var r2=rate(), postes={}, t=0;
+  for(var i=0;i<POSTES.length;i++){
+    var p=POSTES[i];
+    if(p.id==='or'){
+      var g=parseFloat((document.getElementById('inp-'+u+'-og')||{}).value)||0;
+      var v=r2>0?Math.round(g*r2):0;
+      postes[p.id]=v; t+=v;
+    } else {
+      var v2=parseFloat((document.getElementById('inp-'+u+'-'+p.id)||{}).value)||0;
+      postes[p.id]=v2; t+=v2;
+    }
+  }
+  var og=parseFloat((document.getElementById('inp-'+u+'-og')||{}).value)||0;
+  var now=new Date();
+  var dateStr=now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var timeStr=now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  var entry={id:Date.now(), p:postes, og:og, nisab:ST[u].cfg.nisab, date:dateStr, time:timeStr, ts:now.getTime()};
+  ST[u].ent.push(entry);
+  saveU(u); drawEv(u); drawDb(u);
+}
+
+function buildCh(u,ents){
+  var cid='ch-'+u, cv=document.getElementById(cid);
+  if(!cv) return;
+  if(charts[cid]){charts[cid].destroy();delete charts[cid];}
+  var ac=u==='s'?'#C9A84C':'#A87CA0';
+  charts[cid]=new Chart(cv,{
+    type:'line',
+    data:{
+      labels:ents.map(function(e){return e.date+(e.time?' '+e.time:'');}),
+      datasets:[
+        {label:'Patrimoine',data:ents.map(function(e){return tot(e);}),
+         borderColor:ac,backgroundColor:ac+'18',borderWidth:2,
+         pointBackgroundColor:ac,pointRadius:4,tension:.3,fill:true},
+        {label:'Nisab',data:ents.map(function(e){return e.nisab;}),
+         borderColor:'#CF6679',backgroundColor:'transparent',borderWidth:1.5,
+         borderDash:[5,4],pointRadius:2,pointBackgroundColor:'#CF6679',tension:.1,fill:false}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:'#1E1E1E',borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+        titleColor:'#F0EAD6',bodyColor:'#8A8070',
+        callbacks:{label:function(c){return ' '+c.dataset.label+' : '+c.parsed.y.toLocaleString('fr-FR')+' '+sy(u);}}
+      }},
+      scales:{
+        x:{ticks:{color:'#554E44',font:{family:'DM Mono',size:10},maxRotation:45},grid:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#554E44',font:{family:'DM Mono',size:10},callback:function(v){return v.toLocaleString('fr-FR');}},grid:{color:'rgba(255,255,255,.04)'}}
+      }
+    }
+  });
+}
+
+/* ── PARAMS ── */
+function drawPa(u){
+  var el=document.getElementById(u+'-pa'), c=ST[u].cfg, nm=NAMES[u];
+  var h='<div class="card"><div class="ct">Paramètres de calcul</div>';
+  h+='<div class="fgr">';
+  h+='<div class="fg"><label>Nisab ('+sy(u)+') — auto LBMA</label><input id="pa-'+u+'-n" type="number" value="'+c.nisab+'" min="0"></div>';
+  h+='<div class="fg"><label>Taux de zakat (%)</label><input id="pa-'+u+'-t" type="number" value="'+c.taux+'" step="0.1"></div>';
+  h+='<div class="fg"><label>Année hijri</label><input id="pa-'+u+'-a" type="text" value="'+c.annee+'"></div>';
+  h+='<div class="fg"><label>Devise</label><select id="pa-'+u+'-d">';
+  h+='<option value="EUR"'+(c.devise==='EUR'?' selected':'')+'>Euro (€)</option>';
+  h+='<option value="MAD"'+(c.devise==='MAD'?' selected':'')+'>Dirham (MAD)</option>';
+  h+='<option value="USD"'+(c.devise==='USD'?' selected':'')+'>Dollar ($)</option>';
+  h+='</select></div></div>';
+  h+='<div class="al ali" style="margin-bottom:10px;font-size:11px">Le nisab est recalculé automatiquement via LBMA chaque ouverture. Vous pouvez le modifier manuellement.</div>';
+  h+='<div style="display:flex;align-items:center;justify-content:flex-end">';
+  h+='<span class="sok" id="pa-'+u+'-ok">✓ Sauvegardé</span>';
+  h+='<button class="btn bp" id="pa-'+u+'-sv">Sauvegarder</button>';
+  h+='</div></div>';
+  h+='<div class="card"><div class="ct">Données — '+nm+'</div>';
+  h+='<p style="font-size:12px;color:var(--tm);margin-bottom:1rem">Exporter ou réinitialiser les données de '+nm+'.</p>';
+  h+='<div style="display:flex;gap:8px">';
+  h+='<button class="btn bg2" id="pa-'+u+'-ex">Exporter JSON</button>';
+  h+='<button class="btn bd" id="pa-'+u+'-rs">Réinitialiser</button>';
+  h+='</div></div>';
+  el.innerHTML=h;
+
+  document.getElementById('pa-'+u+'-sv').addEventListener('click',function(){
+    ST[u].cfg.nisab=parseFloat(document.getElementById('pa-'+u+'-n').value)||5000;
+    ST[u].cfg.taux =parseFloat(document.getElementById('pa-'+u+'-t').value)||2.5;
+    ST[u].cfg.annee=document.getElementById('pa-'+u+'-a').value.trim();
+    ST[u].cfg.devise=document.getElementById('pa-'+u+'-d').value;
+    ST[u].cfg.auto=false;
+    saveU(u); drawAll(u);
+    var ok=document.getElementById('pa-'+u+'-ok');
+    if(ok){ok.classList.add('on');setTimeout(function(){ok.classList.remove('on');},2000);}
+  });
+
+  document.getElementById('pa-'+u+'-ex').addEventListener('click',function(){
+    var b=new Blob([JSON.stringify({cfg:ST[u].cfg,ent:ST[u].ent},null,2)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download='zakat-'+nm.toLowerCase()+'-'+td()+'.json'; a.click();
+  });
+
+  document.getElementById('pa-'+u+'-rs').addEventListener('click',function(){
+    if(!confirm('Supprimer toutes les données de '+nm+' ? Irréversible.')) return;
+    ST[u]={cfg:Object.assign({},DEFC),ent:[]};
+    ['cfg','ent'].forEach(function(t){localStorage.removeItem(lk(u,t));});
+    drawAll(u);
+  });
+}
+
+function drawAll(u){ drawDb(u); drawPa(u); var ev=document.getElementById(u+'-ev'); if(ev&&ev.classList.contains('on')) drawEv(u); }
+
+/* ── GOLD ── */
+async function fetchGold(){
+  try{
+    var r=await fetch('https://prices.lbma.org.uk/json/gold_pm.json');
+    var data=await r.json();
+    var latest=null;
+    for(var i=data.length-1;i>=0;i--){if(data[i].v&&data[i].v[2]&&data[i].v[2]>0){latest=data[i];break;}}
+    if(!latest) throw new Error('no data');
+    var oz=latest.v[2], gm=oz/31.1035, na=Math.round(gm*85);
+    goldG=gm;
+    document.getElementById('gv').textContent=na.toLocaleString('fr-FR')+' €';
+    document.getElementById('gs').textContent=Math.round(gm).toLocaleString('fr-FR')+' €/g · '+Math.round(oz).toLocaleString('fr-FR')+' €/oz · '+latest.d;
+    USERS.forEach(function(u){ if(ST[u].cfg.auto!==false){ST[u].cfg.nisab=na;saveU(u);} });
+    USERS.forEach(function(u){ drawAll(u); });
+  } catch(e){
+    document.getElementById('gv').textContent='—';
+    document.getElementById('gs').textContent='Cours indisponible — mode hors ligne';
+  }
+}
+
+/* -- GOOGLE DRIVE -- */
+var GD_CID='397033841789-t3f6khcp6692qs6m2f77gcacls7h56dr.apps.googleusercontent.com';
+var GD_FILE='zakat-tracker-data.json';
+var GD={token:null,fileId:null,busy:false};
+function gdSt(m,s,i){var a=document.getElementById('gd-st'),b=document.getElementById('gd-inf'),c=document.getElementById('gd-ic');if(a)a.textContent=m;if(b)b.textContent=s||'';if(c)c.textContent=i||'☁️';}
+function gdUI(on){var c=document.getElementById('gd-conn'),d=document.getElementById('gd-disc'),s=document.getElementById('gd-sync');if(c)c.style.display=on?'none':'block';if(d)d.style.display=on?'block':'none';if(s)s.style.display=on?'block':'none';}
+function gdConnect(){
+  if(!window.google||!window.google.accounts){gdSt('Erreur: script Google non charge','','⚠️');return;}
+  var cli=google.accounts.oauth2.initTokenClient({client_id:GD_CID,scope:'https://www.googleapis.com/auth/drive.appdata',callback:function(r){if(r.error){gdSt('Connexion annulee','','☁️');return;}GD.token=r.access_token;gdUI(true);gdSt('Connecte','Chargement...','🔄');gdLoad();}});
+  cli.requestAccessToken();
+}
+function gdDisconnect(){if(GD.token)try{google.accounts.oauth2.revoke(GD.token);}catch(e){}GD.token=null;GD.fileId=null;gdUI(false);gdSt('Deconnecte','Donnees locales conservees','☁️');}
+async function gdFind(){var r=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27'+GD_FILE+'%27&fields=files(id,modifiedTime)',{headers:{Authorization:'Bearer '+GD.token}});var d=await r.json();if(d.files&&d.files.length){GD.fileId=d.files[0].id;return d.files[0];}return null;}
+async function gdLoad(){if(!GD.token||GD.busy)return;GD.busy=true;try{var f=await gdFind();if(!f){gdSt('Connecte - premiere utilisation','','✅');GD.busy=false;gdSave();return;}var r=await fetch('https://www.googleapis.com/drive/v3/files/'+GD.fileId+'?alt=media',{headers:{Authorization:'Bearer '+GD.token}});var data=await r.json();if(data&&data.state){USERS.forEach(function(u){if(data.state[u]){ST[u].cfg=Object.assign({},DEFC,data.state[u].cfg||{});ST[u].ent=data.state[u].ent||[];}});USERS.forEach(function(u){_origSave(u);});USERS.forEach(function(u){drawAll(u);});}gdSt('Synchronise avec Google Drive','Derniere sauvegarde : '+new Date(f.modifiedTime).toLocaleString('fr-FR'),'✅');}catch(e){gdSt('Erreur de chargement',e.message||'','⚠️');}GD.busy=false;}
+async function gdSave(){if(!GD.token||GD.busy)return;GD.busy=true;try{var payload=JSON.stringify({state:{s:{cfg:ST.s.cfg,ent:ST.s.ent},a:{cfg:ST.a.cfg,ent:ST.a.ent}},savedAt:new Date().toISOString()});var f=await gdFind();if(!f){var meta=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},body:JSON.stringify({name:GD_FILE,parents:['appDataFolder']})});var md=await meta.json();GD.fileId=md.id;}await fetch('https://www.googleapis.com/upload/drive/v3/files/'+GD.fileId+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},body:payload});gdSt('Synchronise avec Google Drive','Sauvegarde : '+new Date().toLocaleTimeString('fr-FR'),'✅');}catch(e){gdSt('Erreur de sauvegarde',e.message||'','⚠️');}GD.busy=false;}
+var _origSave=saveU;
+function saveU(u){_origSave(u);if(GD.token)setTimeout(gdSave,600);}
+/* ── INIT ── */
+USERS.forEach(function(u){ST[u]=loadU(u);});
+USERS.forEach(function(u){drawAll(u);});
+fetchGold();
+document.getElementById('gd-conn').addEventListener('click',gdConnect);
+document.getElementById('gd-disc').addEventListener('click',gdDisconnect);
+document.getElementById('gd-sync').addEventListener('click',function(){if(GD.token)gdLoad();});
+</script>
+</body>
+</html>
